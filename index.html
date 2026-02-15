@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EndroVerse – Dunia Anime Terlengkap</title>
+
+<meta name="description" content="EndroVerse – rekomendasi anime terbaru, favorit, dan TOP 1–10 dengan trailer & detail lengkap. Temukan anime favoritmu sekarang!">
+<link rel="icon" href="https://i.ibb.co/x5xq7hH/endroverse-favicon.png" type="image/png">
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: #0f0f1a;
+    color: white;
+}
+.menu-btn {
+    position: fixed; top:15px; left:15px; font-size:26px; cursor:pointer; z-index:1000;
+}
+.sidebar {
+    position: fixed; top:0; left:-250px; width:220px; height:100%; background:#1a1a2e; padding:15px; transition:0.3s; z-index:999;
+}
+.sidebar button {
+    width:100%; margin:10px 0; padding:10px; border-radius:10px; border:none; background:#ff4d6d; color:white;
+}
+header { padding:15px; text-align:center; background: linear-gradient(90deg,#ff4d6d,#7b2cbf);}
+.sub { font-size:12px;}
+.search-box { text-align:center; margin:10px;}
+input { padding:10px; width:70%; border-radius:20px; border:none;}
+.featured { height:250px; display:flex; align-items:end; padding:15px; background-size:cover;}
+.container { padding:10px;}
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px;}
+.card { background:#1a1a2e; border-radius:12px; overflow:hidden; transition:0.3s; position:relative;}
+.card:hover { transform:scale(1.05);}
+.card img { width:100%; }
+.card p { font-size:12px; padding:5px;}
+.rating { color:#ffd166; font-weight:bold;}
+.badge { position:absolute; top:5px; left:5px; background:gold; color:black; padding:3px 6px; border-radius:6px; font-size:10px; font-weight:bold;}
+.fav { position:absolute; top:5px; right:5px;}
+.detail { position:fixed; top:0; width:100%; height:100%; background:black; display:none; overflow:auto; padding:15px;}
+iframe { width:100%; height:200px; }
+.watermark { position:fixed; bottom:10px; right:10px; font-size:22px; opacity:0.3;}
+</style>
+</head>
+
+<body>
+
+<div class="menu-btn" onclick="toggleMenu()">☰</div>
+
+<div class="sidebar" id="sidebar">
+  <h3>Menu 🌸</h3>
+  <button onclick="loadTop()">🔥 Anime Teratas</button>
+  <button onclick="loadGenres()">🎭 Semua Genre</button>
+  <button onclick="showFav()">❤️ Favorit</button>
+</div>
+
+<header>
+NdroAnimeVerse 🌸
+<div class="sub">KAITO VAHID</div>
+</header>
+
+<div class="search-box">
+<input type="text" id="search" placeholder="Cari anime...">
+</div>
+
+<div class="featured" id="featured"></div>
+
+<div class="container">
+<div class="grid" id="animeList"></div>
+<center><button onclick="loadMore()">Muat Lagi</button></center>
+</div>
+
+<div class="detail" id="detail">
+<button onclick="back()">⬅ Kembali</button>
+<div id="detailContent"></div>
+</div>
+
+<div class="watermark">NDROO KIRYU</div>
+
+<script>
+let page = 1;
+let favs = JSON.parse(localStorage.getItem("favAnime")) || [];
+let topIDs = []; 
+
+function toggleMenu() {
+    let s = document.getElementById("sidebar");
+    s.style.left = s.style.left === "0px" ? "-250px" : "0px";
+}
+
+async function getTopIDs(){
+    let res = await fetch("https://api.jikan.moe/v4/top/anime");
+    let data = await res.json();
+    topIDs = data.data.slice(0,10).map(a=>a.mal_id);
+}
+
+async function getAnime() {
+    let res = await fetch(`https://api.jikan.moe/v4/anime?page=${page}`);
+    let data = await res.json();
+    renderAnime(data.data);
+}
+
+function renderAnime(data) {
+    let list = document.getElementById("animeList");
+    list.innerHTML = "";
+    data.forEach(a => {
+        let card = document.createElement("div");
+        card.className = "card";
+        let isFav = favs.includes(a.mal_id);
+        let topIndex = topIDs.indexOf(a.mal_id);
+        let badgeHTML = topIndex >= 0 ? `<div class="badge">TOP ${topIndex+1}</div>` : "";
+        card.innerHTML = `
+        ${badgeHTML}
+        <div class="fav" onclick="event.stopPropagation();toggleFav(${a.mal_id})">${isFav ? "❤️" : "🤍"}</div>
+        <img src="${a.images.jpg.image_url}">
+        <p>${a.title}</p>
+        <p class="rating">⭐ ${a.score || "N/A"}</p>
+        `;
+        card.onclick = () => showDetail(a.mal_id);
+        list.appendChild(card);
+    });
+}
+
+async function getTop() {
+    let res = await fetch(`https://api.jikan.moe/v4/top/anime`);
+    let data = await res.json();
+    let top = data.data[0];
+    let f = document.getElementById("featured");
+    f.style.backgroundImage = `url(${top.images.jpg.large_image_url})`;
+    f.innerHTML = `<h2>${top.title} 🔥</h2>`;
+}
+
+async function loadTop() {
+    let res = await fetch("https://api.jikan.moe/v4/top/anime");
+    let data = await res.json();
+    let list = document.getElementById("animeList");
+    list.innerHTML = "";
+    renderAnime(data.data);
+}
+
+async function loadGenres() {
+    let res = await fetch("https://api.jikan.moe/v4/genres/anime");
+    let data = await res.json();
+    let list = document.getElementById("animeList");
+    list.innerHTML = "<h3>Pilih Genre 🎭</h3>";
+    data.data.forEach(g => {
+        let btn = document.createElement("button");
+        btn.innerText = g.name;
+        btn.onclick = () => loadByGenre(g.mal_id);
+        list.appendChild(btn);
+    });
+}
+
+async function loadByGenre(id) {
+    let res = await fetch(`https://api.jikan.moe/v4/anime?genres=${id}`);
+    let data = await res.json();
+    let list = document.getElementById("animeList");
+    list.innerHTML = "";
+    renderAnime(data.data);
+}
+
+async function showDetail(id) {
+    let res = await fetch(`https://api.jikan.moe/v4/anime/${id}/full`);
+    let data = await res.json();
+    let a = data.data;
+    document.getElementById("detail").style.display = "block";
+    document.getElementById("detailContent").innerHTML = `
+    <h2>${a.title}</h2>
+    <p>⭐ Rating: ${a.score}</p>
+    <p>🏆 Peringkat: #${a.rank}</p>
+    <p>🔥 Popularitas: #${a.popularity}</p>
+    <p>👥 Anggota: ${a.members}</p>
+    <p><b>Genre:</b> ${a.genres.map(g=>g.name).join(", ")}</p>
+    <p><b>Studio:</b> ${a.studios.map(s=>s.name).join(", ")}</p>
+    <p><b>Sinopsis:</b> ${a.synopsis}</p>
+    ${a.trailer.embed_url ? `<iframe src="${a.trailer.embed_url}"></iframe>` : ""}
+    `;
+}
+
+function toggleFav(id) {
+    if(favs.includes(id)) { favs = favs.filter(f => f !== id); } 
+    else { favs.push(id); }
+    localStorage.setItem("favAnime", JSON.stringify(favs));
+    location.reload();
+}
+
+function showFav() {
+    let list = document.getElementById("animeList");
+    list.innerHTML = "";
+    favs.forEach(id => showDetail(id));
+}
+
+document.getElementById("search").addEventListener("keyup", async function() {
+    let q = this.value;
+    let res = await fetch(`https://api.jikan.moe/v4/anime?q=${q}`);
+    let data = await res.json();
+    let list = document.getElementById("animeList");
+    list.innerHTML = "";
+    renderAnime(data.data);
+});
+
+function back() { document.getElementById("detail").style.display = "none"; }
+function loadMore() { page++; getAnime(); }
+
+getTopIDs();
+getAnime();
+getTop();
+</script>
+
+</body>
+</html>
